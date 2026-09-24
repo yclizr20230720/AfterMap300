@@ -1,0 +1,6 @@
+{
+  "name": "AfterMap 300 - Cinematic Aerial & Veo 3 Video Studio",
+  "description": "Generate high-definition cinematic aerial drone, satellite flythroughs, and cartographic motion maps using Google Veo 3.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
