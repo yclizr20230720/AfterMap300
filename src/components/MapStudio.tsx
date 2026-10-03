@@ -27,6 +27,7 @@ interface MapStudioProps {
   flightStyle: string;
   onFlightStyleChange: (style: string) => void;
   aspectRatio: '16:9' | '9:16';
+  onOpenEditor?: () => void;
 }
 
 type MapMode = 'cyber' | 'satellite' | 'thermal' | 'golden';
@@ -39,6 +40,7 @@ export const MapStudio: React.FC<MapStudioProps> = ({
   flightStyle,
   onFlightStyleChange,
   aspectRatio,
+  onOpenEditor,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [mapMode, setMapMode] = useState<MapMode>('cyber');
@@ -194,37 +196,50 @@ export const MapStudio: React.FC<MapStudioProps> = ({
     ctx.restore();
 
     // 3. Draw Flight Spline / Trajectory
-    if (waypoints.length > 0) {
+    const validWaypoints = (waypoints || []).filter(
+      (w) => w && typeof w.x === 'number' && typeof w.y === 'number'
+    );
+
+    if (validWaypoints.length > 0) {
       // Flight trajectory path
       ctx.strokeStyle = 'rgba(245, 158, 11, 0.85)';
       ctx.lineWidth = 2.5;
       ctx.beginPath();
 
-      const points = waypoints.map((w) => ({
+      const points = validWaypoints.map((w) => ({
         x: (w.x / 100) * width,
         y: (w.y / 100) * height,
       }));
 
-      ctx.moveTo(points[0].x, points[0].y);
-      if (points.length === 2) {
-        ctx.lineTo(points[1].x, points[1].y);
-      } else {
-        for (let i = 0; i < points.length - 1; i++) {
-          const xc = (points[i].x + points[i + 1].x) / 2;
-          const yc = (points[i].y + points[i + 1].y) / 2;
-          ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+      if (points.length >= 2 && points[0]) {
+        ctx.moveTo(points[0].x, points[0].y);
+        if (points.length === 2 && points[1]) {
+          ctx.lineTo(points[1].x, points[1].y);
+        } else {
+          for (let i = 0; i < points.length - 1; i++) {
+            const ptCurrent = points[i];
+            const ptNext = points[i + 1];
+            if (ptCurrent && ptNext) {
+              const xc = (ptCurrent.x + ptNext.x) / 2;
+              const yc = (ptCurrent.y + ptNext.y) / 2;
+              ctx.quadraticCurveTo(ptCurrent.x, ptCurrent.y, xc, yc);
+            }
+          }
+          const lastPt = points[points.length - 1];
+          if (lastPt) {
+            ctx.lineTo(lastPt.x, lastPt.y);
+          }
         }
-        ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
-      }
-      ctx.stroke();
+        ctx.stroke();
 
-      // Spline Glow
-      ctx.strokeStyle = 'rgba(245, 158, 11, 0.2)';
-      ctx.lineWidth = 8;
-      ctx.stroke();
+        // Spline Glow
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.2)';
+        ctx.lineWidth = 8;
+        ctx.stroke();
+      }
 
       // 4. Draw Waypoints
-      waypoints.forEach((wp, idx) => {
+      validWaypoints.forEach((wp, idx) => {
         const px = (wp.x / 100) * width;
         const py = (wp.y / 100) * height;
         const isSelected = idx === selectedWaypointIndex;
@@ -266,53 +281,55 @@ export const MapStudio: React.FC<MapStudioProps> = ({
 
         ctx.font = '9px monospace';
         ctx.fillStyle = 'rgba(148, 163, 184, 0.8)';
-        ctx.fillText(`${wp.altitude}m | ${wp.speed}km/h`, px + 10, py + 8);
+        ctx.fillText(`${wp.altitude ?? 150}m | ${wp.speed ?? 100}km/h`, px + 10, py + 8);
       });
 
       // 5. Draw Animated Camera / Drone position along the flight path
-      if (waypoints.length >= 2) {
-        const totalSegments = points.length - 1;
-        const progressScaled = flightProgress * totalSegments;
-        const currentSegment = Math.min(Math.floor(progressScaled), totalSegments - 1);
+      if (points.length >= 2) {
+        const totalSegments = Math.max(1, points.length - 1);
+        const progressScaled = Math.max(0, Math.min(flightProgress, 0.9999)) * totalSegments;
+        const currentSegment = Math.max(0, Math.min(Math.floor(progressScaled), totalSegments - 1));
         const segmentT = progressScaled - currentSegment;
 
         const p1 = points[currentSegment];
-        const p2 = points[currentSegment + 1];
+        const p2 = points[currentSegment + 1] || points[currentSegment];
 
-        const droneX = p1.x + (p2.x - p1.x) * segmentT;
-        const droneY = p1.y + (p2.y - p1.y) * segmentT;
+        if (p1 && p2) {
+          const droneX = p1.x + (p2.x - p1.x) * segmentT;
+          const droneY = p1.y + (p2.y - p1.y) * segmentT;
 
-        const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+          const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
 
-        ctx.save();
-        ctx.translate(droneX, droneY);
-        ctx.rotate(angle);
+          ctx.save();
+          ctx.translate(droneX, droneY);
+          ctx.rotate(angle);
 
-        // Drone camera reticle & heading cone
-        ctx.fillStyle = 'rgba(245, 158, 11, 0.15)';
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(45, -20);
-        ctx.lineTo(45, 20);
-        ctx.closePath();
-        ctx.fill();
+          // Drone camera reticle & heading cone
+          ctx.fillStyle = 'rgba(245, 158, 11, 0.15)';
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(45, -20);
+          ctx.lineTo(45, 20);
+          ctx.closePath();
+          ctx.fill();
 
-        // Drone body
-        ctx.fillStyle = '#f59e0b';
-        ctx.beginPath();
-        ctx.moveTo(10, 0);
-        ctx.lineTo(-6, -6);
-        ctx.lineTo(-3, 0);
-        ctx.lineTo(-6, 6);
-        ctx.closePath();
-        ctx.fill();
+          // Drone body
+          ctx.fillStyle = '#f59e0b';
+          ctx.beginPath();
+          ctx.moveTo(10, 0);
+          ctx.lineTo(-6, -6);
+          ctx.lineTo(-3, 0);
+          ctx.lineTo(-6, 6);
+          ctx.closePath();
+          ctx.fill();
 
-        ctx.restore();
+          ctx.restore();
+        }
       }
     }
 
     // 6. Draw Crosshair cursor if hovered
-    if (hoveredCoords) {
+    if (hoveredCoords && typeof hoveredCoords.x === 'number' && typeof hoveredCoords.y === 'number') {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
       ctx.lineWidth = 0.8;
       ctx.setLineDash([2, 2]);
@@ -338,7 +355,8 @@ export const MapStudio: React.FC<MapStudioProps> = ({
     const pctY = Math.round((clickY / rect.height) * 100);
 
     // Check if clicked close to an existing waypoint
-    const clickedIdx = waypoints.findIndex((w) => {
+    const clickedIdx = (waypoints || []).findIndex((w) => {
+      if (!w || typeof w.x !== 'number' || typeof w.y !== 'number') return false;
       const wx = (w.x / 100) * rect.width;
       const wy = (w.y / 100) * rect.height;
       const dist = Math.hypot(wx - clickX, wy - clickY);
@@ -355,8 +373,8 @@ export const MapStudio: React.FC<MapStudioProps> = ({
         name: `WP-${waypoints.length + 1}`,
         x: pctX,
         y: pctY,
-        altitude: prevWp ? prevWp.altitude : 250,
-        speed: prevWp ? prevWp.speed : 120,
+        altitude: prevWp?.altitude ?? 250,
+        speed: prevWp?.speed ?? 120,
         heading: 45,
       };
       setWaypoints([...waypoints, newWp]);
@@ -378,7 +396,7 @@ export const MapStudio: React.FC<MapStudioProps> = ({
       const pctY = Math.min(Math.max(Math.round((mouseY / rect.height) * 100), 2), 98);
 
       setWaypoints((prev) =>
-        prev.map((w, idx) => (idx === draggedIndex ? { ...w, x: pctX, y: pctY } : w))
+        prev.map((w, idx) => (idx === draggedIndex && w ? { ...w, x: pctX, y: pctY } : w))
       );
     }
   };
@@ -390,7 +408,8 @@ export const MapStudio: React.FC<MapStudioProps> = ({
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
-    const clickedIdx = waypoints.findIndex((w) => {
+    const clickedIdx = (waypoints || []).findIndex((w) => {
+      if (!w || typeof w.x !== 'number' || typeof w.y !== 'number') return false;
       const wx = (w.x / 100) * rect.width;
       const wy = (w.y / 100) * rect.height;
       return Math.hypot(wx - clickX, wy - clickY) < 14;
@@ -408,11 +427,13 @@ export const MapStudio: React.FC<MapStudioProps> = ({
     setDraggedIndex(null);
   };
 
-  const activeWaypoint = waypoints[selectedWaypointIndex] || waypoints[0];
+  const activeWaypoint = (waypoints && waypoints.length > 0)
+    ? (waypoints[selectedWaypointIndex] || waypoints[0])
+    : null;
 
   const updateActiveWaypoint = (field: keyof Waypoint, value: any) => {
     setWaypoints((prev) =>
-      prev.map((w, idx) => (idx === selectedWaypointIndex ? { ...w, [field]: value } : w))
+      prev.map((w, idx) => (idx === selectedWaypointIndex && w ? { ...w, [field]: value } : w))
     );
   };
 
@@ -423,14 +444,15 @@ export const MapStudio: React.FC<MapStudioProps> = ({
   };
 
   const resetToPreset = () => {
+    if (!selectedPreset?.waypoints) return;
     const defaultWps: Waypoint[] = selectedPreset.waypoints.map((pw, i) => ({
       id: `wp-${i + 1}`,
       name: `WP-${i + 1}`,
-      x: pw.x,
-      y: pw.y,
-      altitude: pw.altitude,
-      speed: pw.speed,
-      heading: pw.heading,
+      x: pw?.x ?? 50,
+      y: pw?.y ?? 50,
+      altitude: pw?.altitude ?? 200,
+      speed: pw?.speed ?? 100,
+      heading: pw?.heading ?? 0,
     }));
     setWaypoints(defaultWps);
     setSelectedWaypointIndex(0);
@@ -479,6 +501,30 @@ export const MapStudio: React.FC<MapStudioProps> = ({
         </div>
       </div>
 
+      {/* Flight Planning Map Editor Quick Launch Banner */}
+      {onOpenEditor && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+            <div>
+              <span className="text-xs font-mono font-bold text-amber-300">
+                ADVANCED FLIGHT PLANNING MAP EDITOR
+              </span>
+              <p className="text-[11px] text-zinc-400">
+                Full-screen 3D trajectory choreographing, camera yaw & gimbal pitch, POIs, and terrain clearance profiles.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onOpenEditor}
+            className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold font-mono text-xs flex items-center gap-1.5 transition-all shadow-md shadow-amber-500/20"
+          >
+            <span>Open Map Editor</span>
+            <Maximize2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Main Map Canvas Area */}
       <div className="relative bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl">
         {/* Map Top HUD Controls */}
@@ -521,6 +567,16 @@ export const MapStudio: React.FC<MapStudioProps> = ({
 
           {/* Quick Map Actions */}
           <div className="flex items-center gap-1.5 bg-zinc-950/80 backdrop-blur-md p-1 rounded-xl border border-zinc-800 pointer-events-auto shadow-md">
+            {onOpenEditor && (
+              <button
+                onClick={onOpenEditor}
+                title="Launch Full Map Editor for Planning"
+                className="px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors flex items-center gap-1.5"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span>Map Editor</span>
+              </button>
+            )}
             <button
               onClick={() => setIsSimulatingFlight(!isSimulatingFlight)}
               title="Toggle Flight Path Drone Simulation"

@@ -1,10 +1,10 @@
 import React from 'react';
-import { Compass, Video, Layers, Sparkles, Film, ShieldCheck, MapPin } from 'lucide-react';
+import { Compass, Video, Layers, Sparkles, Film, ShieldCheck, MapPin, Map } from 'lucide-react';
 import { AspectRatio } from '../types/aftermap';
 
 interface HeaderProps {
-  activeTab: 'studio' | 'cinema' | 'gallery';
-  setActiveTab: (tab: 'studio' | 'cinema' | 'gallery') => void;
+  activeTab: 'studio' | 'editor' | 'cinema' | 'gallery';
+  setActiveTab: (tab: 'studio' | 'editor' | 'cinema' | 'gallery') => void;
   aspectRatio: AspectRatio;
   waypointCount: number;
   selectedLocation: string;
@@ -57,6 +57,23 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Layers className="w-3.5 h-3.5" />
             <span>Map Studio</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('editor')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              activeTab === 'editor'
+                ? 'bg-amber-500 text-zinc-950 font-bold shadow-md shadow-amber-500/20'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
+            }`}
+          >
+            <Map className="w-3.5 h-3.5" />
+            <span className="flex items-center gap-1">
+              Map Editor
+              <span className="hidden sm:inline text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
+                PLAN
+              </span>
+            </span>
           </button>
 
           <button

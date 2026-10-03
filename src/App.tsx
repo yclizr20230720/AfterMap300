@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { MapStudio } from './components/MapStudio';
+import { MapEditor } from './components/MapEditor';
 import { PromptDirector } from './components/PromptDirector';
 import { CinemaDeck } from './components/CinemaDeck';
 import { ShowcaseGallery } from './components/ShowcaseGallery';
@@ -14,7 +15,7 @@ import { AspectRatio, Resolution, Waypoint, VideoProject, GenerationStatus } fro
 import { LOCATION_PRESETS, LocationPreset, SHOWCASE_VIDEOS } from './data/presets';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'studio' | 'cinema' | 'gallery'>('studio');
+  const [activeTab, setActiveTab] = useState<'studio' | 'editor' | 'cinema' | 'gallery'>('studio');
   const [selectedLocation, setSelectedLocation] = useState<LocationPreset>(LOCATION_PRESETS[0]);
   
   // Waypoint state
@@ -299,6 +300,7 @@ export default function App() {
                 flightStyle={flightStyle}
                 onFlightStyleChange={setFlightStyle}
                 aspectRatio={aspectRatio}
+                onOpenEditor={() => setActiveTab('editor')}
               />
             </div>
 
@@ -323,6 +325,25 @@ export default function App() {
                 isGenerating={generationStatus.isGenerating}
               />
             </div>
+          </div>
+        )}
+
+        {activeTab === 'editor' && (
+          <div className="max-w-6xl mx-auto space-y-6">
+            <MapEditor
+              waypoints={waypoints}
+              setWaypoints={setWaypoints}
+              selectedPreset={selectedLocation}
+              onSelectPreset={handleSelectPreset}
+              flightStyle={flightStyle}
+              onFlightStyleChange={setFlightStyle}
+              aspectRatio={aspectRatio}
+              onApplyToPrompt={(summary) => {
+                setPrompt(summary);
+                setActiveTab('studio');
+              }}
+              onCloseEditor={() => setActiveTab('studio')}
+            />
           </div>
         )}
 
