@@ -18,6 +18,7 @@ interface RenderMonitorProps {
   onCancel?: () => void;
   onDismissError: () => void;
   onTestWithSample: () => void;
+  onRunSimulation?: () => void;
 }
 
 export const RenderMonitor: React.FC<RenderMonitorProps> = ({
@@ -25,8 +26,41 @@ export const RenderMonitor: React.FC<RenderMonitorProps> = ({
   onCancel,
   onDismissError,
   onTestWithSample,
+  onRunSimulation,
 }) => {
   if (!status.isGenerating && !status.error) return null;
+
+  // Safely parse JSON error strings to avoid raw JSON dumps in UI
+  let cleanErrorMessage = status.error || '';
+  let isQuotaExhausted = false;
+
+  if (status.error) {
+    const errorStr = status.error.trim();
+    if (errorStr.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(errorStr);
+        if (parsed.error?.message) {
+          cleanErrorMessage = parsed.error.message;
+        } else if (parsed.message) {
+          cleanErrorMessage = parsed.message;
+        }
+        if (parsed.error?.code === 429 || parsed.error?.status === 'RESOURCE_EXHAUSTED' || parsed.code === 429) {
+          isQuotaExhausted = true;
+        }
+      } catch {
+        // Fall back to original string
+      }
+    }
+
+    if (
+      cleanErrorMessage.includes('429') ||
+      cleanErrorMessage.includes('quota') ||
+      cleanErrorMessage.includes('RESOURCE_EXHAUSTED') ||
+      cleanErrorMessage.includes('rate-limits')
+    ) {
+      isQuotaExhausted = true;
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
@@ -46,7 +80,7 @@ export const RenderMonitor: React.FC<RenderMonitorProps> = ({
                 {status.error ? 'Generation Interrupted' : 'Veo 3 Neural Synthesis'}
               </h3>
               <p className="text-[11px] font-mono text-zinc-400">
-                Model: <span className="text-amber-400 font-bold">veo-3.1-fast-generate-preview</span>
+                Model: <span className="text-amber-400 font-bold">veo-3.1-lite-generate-preview</span>
               </p>
             </div>
           </div>
@@ -60,36 +94,72 @@ export const RenderMonitor: React.FC<RenderMonitorProps> = ({
         {status.error ? (
           /* Error State */
           <div className="space-y-4">
-            <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 text-xs font-mono text-rose-300 space-y-2">
-              <div className="flex items-center gap-2 font-bold text-rose-200">
-                <AlertTriangle className="w-4 h-4 text-rose-400" />
-                <span>Backend Error Encountered</span>
+            {isQuotaExhausted ? (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 text-xs font-mono text-amber-200 space-y-3">
+                <div className="flex items-center gap-2 font-bold text-amber-400">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Veo 3 Quota Limit Reached (429 Resource Exhausted)</span>
+                </div>
+                <p className="text-zinc-300 text-[11px] leading-relaxed">
+                  Google Veo 3 high-definition aerial video synthesis requires an active paid tier with Cloud billing. Free or trial quotas do not include Veo synthesis credits.
+                </p>
+                <div className="bg-zinc-950/70 p-2.5 rounded-xl border border-zinc-800 text-[10px] text-zinc-400 space-y-1">
+                  <div>
+                    <span className="text-zinc-300">Solution: </span>
+                    <span>You can run our </span>
+                    <strong className="text-amber-400">Flight Simulator</strong>
+                    <span> to preview this mission telemetry without consuming any quota, or configure a paid key in Settings &gt; Secrets.</span>
+                  </div>
+                  <div>
+                    <a
+                      href="https://ai.google.dev/gemini-api/docs/rate-limits"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-amber-400 underline hover:text-amber-300 transition-colors"
+                    >
+                      Gemini API Quotas & Billing Docs &rarr;
+                    </a>
+                  </div>
+                </div>
               </div>
-              <p className="text-rose-300/90 leading-relaxed text-[11px]">
-                {status.error}
-              </p>
-            </div>
+            ) : (
+              <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4 text-xs font-mono text-rose-300 space-y-2">
+                <div className="flex items-center gap-2 font-bold text-rose-200">
+                  <AlertTriangle className="w-4 h-4 text-rose-400" />
+                  <span>Synthesis Alert</span>
+                </div>
+                <p className="text-rose-300/90 leading-relaxed text-[11px]">
+                  {cleanErrorMessage}
+                </p>
+              </div>
+            )}
 
-            <div className="text-[11px] font-mono text-zinc-400 bg-zinc-900/60 p-3 rounded-xl border border-zinc-800">
-              <p>
-                <strong>Tip:</strong> Ensure your Gemini API Key is configured in the environment or Settings panel. You can also explore preloaded AfterMap 300 aerial master simulations immediately in Cinema Deck.
-              </p>
-            </div>
+            <div className="flex flex-col gap-2 pt-2">
+              {onRunSimulation && (
+                <button
+                  onClick={onRunSimulation}
+                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-zinc-950 font-bold font-mono text-xs hover:from-amber-400 hover:to-orange-400 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-amber-500/20"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Synthesize with Flight Simulator (Quota-Free)</span>
+                </button>
+              )}
 
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                onClick={onTestWithSample}
-                className="flex-1 py-2.5 px-3 rounded-xl bg-amber-500 text-zinc-950 font-bold font-mono text-xs hover:bg-amber-400 transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Film className="w-3.5 h-3.5" />
-                <span>Explore Showcase Aerials</span>
-              </button>
-              <button
-                onClick={onDismissError}
-                className="py-2.5 px-4 rounded-xl bg-zinc-900 text-zinc-300 border border-zinc-800 font-mono text-xs hover:bg-zinc-800 transition-colors"
-              >
-                Close
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={onTestWithSample}
+                  className="flex-1 py-2 px-3 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 font-mono text-xs hover:bg-zinc-850 hover:text-zinc-100 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Film className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Showcase Flights</span>
+                </button>
+                <button
+                  onClick={onDismissError}
+                  className="py-2 px-4 rounded-xl bg-zinc-900 text-zinc-400 border border-zinc-800 font-mono text-xs hover:bg-zinc-800 hover:text-zinc-200 transition-colors cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
           </div>
         ) : (

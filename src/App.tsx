@@ -88,15 +88,17 @@ export default function App() {
     setActiveTab('studio');
   };
 
-  // Video generation flow with Veo 3
-  const handleGenerateVideo = async () => {
+  // Video generation flow with Veo 3 or Flight Simulator
+  const handleGenerateVideo = async (forceSimulation = false) => {
     if (generationStatus.isGenerating) return;
 
     // Reset status
     setGenerationStatus({
       isGenerating: true,
       progressPercent: 5,
-      stageMessage: 'Initializing Veo 3 neural tensor (veo-3.1-fast-generate-preview)...',
+      stageMessage: forceSimulation 
+        ? 'Initializing Flight Neural Simulator (Quota-Free Mode)...'
+        : 'Initializing Veo 3 neural tensor (veo-3.1-lite-generate-preview)...',
       elapsedSeconds: 0,
       error: null,
       aspectRatio: aspectRatio,
@@ -109,16 +111,14 @@ export default function App() {
       seconds += 1;
       setGenerationStatus((prev) => {
         // Calculate simulated progress up to 92% until done
-        let newProgress = Math.min(10 + seconds * 1.2, 92);
+        let newProgress = Math.min(10 + seconds * (forceSimulation ? 14 : 1.2), 92);
         let msg = prev.stageMessage;
-        if (seconds > 6 && seconds <= 20) {
+        if (seconds > 1 && seconds <= 3) {
           msg = 'Synthesizing topographical voxel terrain and elevation contours...';
-        } else if (seconds > 20 && seconds <= 40) {
+        } else if (seconds > 3 && seconds <= 5) {
           msg = 'Raytracing atmospheric scattering, cloud density, and sunlight reflections...';
-        } else if (seconds > 40 && seconds <= 60) {
+        } else if (seconds > 5) {
           msg = 'Interpolating 60fps fluid camera motion vector and optical anamorphic flares...';
-        } else if (seconds > 60) {
-          msg = 'Assembling final 1080p MP4 master stream...';
         }
         return {
           ...prev,
@@ -131,7 +131,7 @@ export default function App() {
 
     try {
       // Step 1: Initiate video generation on backend
-      console.log('[Veo 3] Requesting generation...');
+      console.log(`[Veo 3] Requesting generation (simulate: ${forceSimulation})...`);
       const genRes = await fetch('/api/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -139,6 +139,8 @@ export default function App() {
           prompt: prompt,
           aspectRatio: aspectRatio, // strictly '16:9' or '9:16'
           resolution: resolution,
+          terrainType: selectedLocation.terrainType,
+          simulate: forceSimulation,
         }),
       });
 
@@ -147,17 +149,20 @@ export default function App() {
         throw new Error(errJson.error || `Server responded with status ${genRes.status}`);
       }
 
-      const { operationName } = await genRes.json();
+      const { operationName, isSimulation } = await genRes.json();
       console.log('[Veo 3] Operation started:', operationName);
 
       setGenerationStatus((prev) => ({
         ...prev,
         operationName,
-        progressPercent: 18,
-        stageMessage: 'Veo 3 operation created. Polling neural render queue...',
+        progressPercent: isSimulation ? 35 : 18,
+        stageMessage: isSimulation 
+          ? 'Rendering telemetry vector paths and high-speed motion blur...'
+          : 'Veo 3 operation created. Polling neural render queue...',
       }));
 
-      // Step 2: Poll operation status every 5 seconds
+      // Step 2: Poll operation status (faster polling for simulation)
+      const pollDelay = isSimulation ? 1500 : 5000;
       pollIntervalRef.current = setInterval(async () => {
         try {
           const pollRes = await fetch('/api/video-status', {
@@ -253,7 +258,7 @@ export default function App() {
             error: pollError.message || 'Operation failed during synthesis',
           }));
         }
-      }, 5000);
+      }, pollDelay);
     } catch (startError: any) {
       console.error('[Veo 3] Generation initiation error:', startError);
       clearInterval(pollIntervalRef.current);
@@ -321,7 +326,8 @@ export default function App() {
                 setLighting={setLighting}
                 selectedLocation={selectedLocation}
                 waypoints={waypoints}
-                onGenerateVideo={handleGenerateVideo}
+                onGenerateVideo={() => handleGenerateVideo(false)}
+                onRunSimulation={() => handleGenerateVideo(true)}
                 isGenerating={generationStatus.isGenerating}
               />
             </div>
@@ -385,6 +391,10 @@ export default function App() {
         onTestWithSample={() => {
           setGenerationStatus((prev) => ({ ...prev, error: null, isGenerating: false }));
           setActiveTab('cinema');
+        }}
+        onRunSimulation={() => {
+          setGenerationStatus((prev) => ({ ...prev, error: null, isGenerating: false }));
+          handleGenerateVideo(true);
         }}
       />
     </div>

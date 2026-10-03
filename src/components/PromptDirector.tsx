@@ -33,6 +33,7 @@ interface PromptDirectorProps {
   selectedLocation: LocationPreset;
   waypoints: Waypoint[];
   onGenerateVideo: () => void;
+  onRunSimulation?: () => void;
   isGenerating: boolean;
 }
 
@@ -52,6 +53,7 @@ export const PromptDirector: React.FC<PromptDirectorProps> = ({
   selectedLocation,
   waypoints,
   onGenerateVideo,
+  onRunSimulation,
   isGenerating,
 }) => {
   const [isEnhancing, setIsEnhancing] = useState<boolean>(false);
@@ -119,7 +121,7 @@ export const PromptDirector: React.FC<PromptDirectorProps> = ({
                 Veo 3 Flight Director
               </h2>
               <span className="text-[10px] font-mono bg-zinc-800 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">
-                veo-3.1-fast-generate-preview
+                veo-3.1-lite-generate-preview
               </span>
             </div>
             <p className="text-[11px] text-zinc-400 font-mono">
@@ -327,19 +329,33 @@ export const PromptDirector: React.FC<PromptDirectorProps> = ({
       </div>
 
       {/* Primary Action Button */}
-      <button
-        type="button"
-        onClick={onGenerateVideo}
-        disabled={isGenerating || !prompt.trim()}
-        className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:via-orange-400 hover:to-amber-500 text-zinc-950 font-bold font-mono text-sm tracking-wider uppercase transition-all shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-      >
-        <Video className="w-4 h-4" />
-        <span>Generate Video with Veo 3 ({aspectRatio})</span>
-        <ArrowRight className="w-4 h-4" />
-      </button>
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={onGenerateVideo}
+          disabled={isGenerating || !prompt.trim()}
+          className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:via-orange-400 hover:to-amber-500 text-zinc-950 font-bold font-mono text-sm tracking-wider uppercase transition-all shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        >
+          <Video className="w-4 h-4" />
+          <span>Generate Video with Veo 3 ({aspectRatio})</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+
+        {onRunSimulation && (
+          <button
+            type="button"
+            onClick={onRunSimulation}
+            disabled={isGenerating || !prompt.trim()}
+            className="w-full py-2.5 px-3 rounded-xl bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 hover:border-amber-500/50 text-zinc-300 hover:text-amber-400 font-mono text-xs font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Run Flight Simulator (Quota-Free Mode)</span>
+          </button>
+        )}
+      </div>
 
       <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 pt-1">
-        <span>Model: veo-3.1-fast-generate-preview</span>
+        <span>Model: veo-3.1-lite-generate-preview</span>
         <span>Resolution: {resolution}</span>
         <span>Aspect: {aspectRatio}</span>
       </div>

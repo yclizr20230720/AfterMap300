@@ -185,7 +185,7 @@ export const SHOWCASE_VIDEOS: VideoProject[] = [
     prompt: 'Cinematic FPV drone sweeping over Tokyo Shibuya crossing at midnight during light rain. Wet asphalt reflecting vibrant neon billboards, ultra-detailed glass facades, smooth descent between glowing skyscrapers, anamorphic lens flares, photorealistic 1080p aerial cinematography.',
     aspectRatio: '16:9',
     resolution: '1080p',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-drone-view-of-a-metropolitan-city-at-night-42848-large.mp4',
+    videoUrl: '/samples/aerial-shibuya.mp4',
     createdAt: Date.now() - 1000 * 60 * 60 * 2,
     flightData: {
       location: 'Shibuya Crossing & Shinjuku Skyway',
@@ -202,7 +202,7 @@ export const SHOWCASE_VIDEOS: VideoProject[] = [
     prompt: 'Sweeping orbital helicopter shot circling the dramatic limestone peaks of Tre Cime di Lavaredo at sunrise. Golden sunbeams piercing a thick sea of low-hanging white alpine clouds, jagged cliffs cast in warm amber rim lighting, crisp mountain air, 8k hyperrealistic nature documentary.',
     aspectRatio: '16:9',
     resolution: '1080p',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-aerial-view-of-snow-covered-mountain-peaks-32867-large.mp4',
+    videoUrl: '/samples/aerial-alpine.mp4',
     createdAt: Date.now() - 1000 * 60 * 60 * 5,
     flightData: {
       location: 'Tre Cime di Lavaredo Summit',
@@ -219,7 +219,7 @@ export const SHOWCASE_VIDEOS: VideoProject[] = [
     prompt: 'Spectacular vertical 9:16 aerial drone tracking shot sweeping over black sand volcanic coastline. Powerful azure ocean waves breaking into white foam along volcanic basalt sea stacks, mood atmospheric fog, 60fps cinematic fluidity.',
     aspectRatio: '9:16',
     resolution: '1080p',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-aerial-view-of-waves-crashing-on-a-rocky-coast-42858-large.mp4',
+    videoUrl: '/samples/aerial-coastal.mp4',
     createdAt: Date.now() - 1000 * 60 * 60 * 8,
     flightData: {
       location: 'Vik Reynisfjara Basalt Coast',
@@ -236,7 +236,7 @@ export const SHOWCASE_VIDEOS: VideoProject[] = [
     prompt: 'Fast-paced FPV acrobatic drone dive plunging into the dramatic red rock precipices of Horseshoe Bend. Gliding inches above terracotta sandstone canyon walls, skimming the emerald green river winding through the gorge, warm sunset shadows.',
     aspectRatio: '16:9',
     resolution: '1080p',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-aerial-flight-over-desert-canyon-at-sunset-41712-large.mp4',
+    videoUrl: '/samples/aerial-canyon.mp4',
     createdAt: Date.now() - 1000 * 60 * 60 * 12,
     flightData: {
       location: 'Horseshoe Bend Canyon',
